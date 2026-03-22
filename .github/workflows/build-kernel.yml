@@ -65,8 +65,7 @@ jobs:
                 VALUE=$(grep -w "$CONFIG" "$CONFIG_ENV" | head -n 1 | cut -d "=" -f 2-)
             fi
 
-            # 只对 Makefile 直接使用的变量跳过 false 值，避免传递 "false" 字符串
-            # 这些变量会被拼接到编译命令中（如 ccflags-y += $(DISABLE_LTO)）
+            # 只对 Makefile 直接使用的变量跳过 false 值
             if [[ "$CONFIG" == "DISABLE_LTO" || "$CONFIG" == "DISABLE_CC_WERROR" ]]; then
                 if [ "$VALUE" = "true" ]; then
                     echo "$CONFIG=$VALUE" >> $GITHUB_ENV
@@ -74,17 +73,9 @@ jobs:
                     echo "Skipping $CONFIG (value: ${VALUE:-empty})"
                 fi
             else
-                # 其他变量即使为 false/空也要设置，因为 shell 条件判断依赖它们存在
                 echo "$CONFIG=$VALUE" >> $GITHUB_ENV
             fi
         done
-
-                echo "Skipping $CONFIG (value: ${VALUE:-empty})"
-            else
-                echo "$CONFIG=$VALUE" >> $GITHUB_ENV
-            fi
-        done
-
     - name: Remove unused packages
       if: env.REMOVE_UNUSED_PACKAGES == 'true'
       uses: jlumbroso/free-disk-space@main
