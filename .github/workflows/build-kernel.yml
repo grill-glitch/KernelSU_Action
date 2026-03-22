@@ -65,7 +65,20 @@ jobs:
                 VALUE=$(grep -w "$CONFIG" "$CONFIG_ENV" | head -n 1 | cut -d "=" -f 2-)
             fi
 
-            if [[ "$CONFIG" =~ ^(DISABLE_LTO|DISABLE_CC_WERROR|ADD_KPROBES_CONFIG|ADD_OVERLAYFS_CONFIG|APPLY_KSU_PATCH|ENABLE_KERNELSU|USE_CUSTOM_CLANG|USE_CUSTOM_GCC_64|USE_CUSTOM_GCC_32|USE_CUSTOM_ANYKERNEL3|ENABLE_CCACHE|NEED_DTBO|BUILD_BOOT_IMG|REMOVE_UNUSED_PACKAGES|ADD_LOCALVERSION_TO_FILENAME|ENABLE_GCC_ARM64|ENABLE_GCC_ARM32)$ ]] && [ "$VALUE" != "true" ]; then
+            # 只对 Makefile 直接使用的变量跳过 false 值，避免传递 "false" 字符串
+            # 这些变量会被拼接到编译命令中（如 ccflags-y += $(DISABLE_LTO)）
+            if [[ "$CONFIG" == "DISABLE_LTO" || "$CONFIG" == "DISABLE_CC_WERROR" ]]; then
+                if [ "$VALUE" = "true" ]; then
+                    echo "$CONFIG=$VALUE" >> $GITHUB_ENV
+                else
+                    echo "Skipping $CONFIG (value: ${VALUE:-empty})"
+                fi
+            else
+                # 其他变量即使为 false/空也要设置，因为 shell 条件判断依赖它们存在
+                echo "$CONFIG=$VALUE" >> $GITHUB_ENV
+            fi
+        done
+
                 echo "Skipping $CONFIG (value: ${VALUE:-empty})"
             else
                 echo "$CONFIG=$VALUE" >> $GITHUB_ENV
